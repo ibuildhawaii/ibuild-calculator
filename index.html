@@ -1600,7 +1600,7 @@
 
     <script>
         // ==================== 온라인 데이터베이스 설정 ====================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo3uGO1js3JIeGgUeQbIOPI82lbGdjMG17wDdJrKL0Qx2Xam4AM8Zp5o2AWyfua15a/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyuQ9Jbfe47qKtYqRfrBJdEQgbHPed7QUb1VaBB0GgIfFFfUw_o8EDFXWDnFFCoeWV/exec';
         const APP_PASSWORD = 'Screen10000**';
         let userPassword = '';
         let isOnlineMode = true; // 온라인 모드 활성화
@@ -1628,7 +1628,8 @@
         }
 
         // 연결 테스트
-        async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
+        // 1. 저장 함수 (CORS 우회를 위해 mode: 'no-cors' 사용)
+async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
     try {
         const payload = {
             password: APP_PASSWORD,
@@ -1647,22 +1648,32 @@
             results: results
         };
 
-        // 브라우저의 CORS 차단을 우회하기 위해 'no-cors' 모드를 사용합니다.
         await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            mode: 'no-cors', // CORS 정책 차단 우회
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
         });
 
-        // no-cors 모드에서는 응답을 읽을 수 없지만 전송 자체는 성공한 것으로 간주합니다.
         return { success: true }; 
-        
     } catch (error) {
         console.error('저장 에러:', error);
         return { success: false, error: error.message };
     }
-} // 이 위치에서 함수가 정확히 닫히도록 확인하세요.
+} // <--- 괄호가 누락되지 않았는지 꼭 확인!
+
+// 2. 연결 테스트 함수 (오타 수정)
+async function testConnection() {
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(APP_PASSWORD) + '&action=load');
+        const data = await response.json();
+        if (data.success) {
+            console.log('✅ 연결 성공! 데이터:', data.data.length, '개');
+        }
+    } catch (error) {
+        console.error('❌ 연결 실패:', error);
+    }
+}
         // Google Sheets에서 불러오기
         async function loadOnlineCalculations() {
             try {
