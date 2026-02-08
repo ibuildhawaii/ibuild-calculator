@@ -1600,7 +1600,7 @@
 
     <script>
         // ==================== 온라인 데이터베이스 설정 ====================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby0bhoO6nCUhUJbY6abgkWwIvzW6NjNADbzeRRO2iyV-kXX1YQKAI1Wr3wy0hpsgzkG/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOccvIduYe3DXfFL_pj8upVWAC45Kiai2UNqe3UaLw3kyacn8rALx7UQvstNuNkt6g/exec';
         const APP_PASSWORD = 'Screen10000**';
         let userPassword = '';
         let isOnlineMode = true; // 온라인 모드 활성화
@@ -1655,7 +1655,7 @@
         }
 
         // Google Sheets에 저장
-        async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
+ async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
     try {
         const payload = {
             password: APP_PASSWORD,
@@ -1674,7 +1674,7 @@
             results: results
         };
 
-        // CORS 에러를 방지하기 위해 mode: 'no-cors'와 Content-Type을 'text/plain'으로 설정합니다.
+        // no-cors 모드를 사용하여 CORS 차단을 우회합니다.
         await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
@@ -1682,13 +1682,14 @@
             body: JSON.stringify(payload)
         });
 
-        // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주하고 결과를 반환합니다.
+        // 전송 성공으로 간주
         return { success: true }; 
         
     } catch (error) {
-        console.error('구글 시트 저장 오류:', error);
+        console.error('저장 에러:', error);
         return { success: false, error: error.message };
     }
+} // 이 닫는 괄호가 정확히 있는지 확인하세요!
 };
             }
         }
