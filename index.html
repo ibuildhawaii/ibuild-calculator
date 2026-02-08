@@ -1600,7 +1600,7 @@
 
     <script>
         // ==================== 온라인 데이터베이스 설정 ====================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOccvIduYe3DXfFL_pj8upVWAC45Kiai2UNqe3UaLw3kyacn8rALx7UQvstNuNkt6g/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdMfLWUXS7g_zsZ5rOMPda3JJ7ENx3hIZ2Lv42Ekc3KGIdHAOsXxiC_1pWy8hGxwkd/exec';
         const APP_PASSWORD = 'Screen10000**';
         let userPassword = '';
         let isOnlineMode = true; // 온라인 모드 활성화
@@ -1674,7 +1674,7 @@
             results: results
         };
 
-        // no-cors 모드를 사용하여 CORS 차단을 우회합니다.
+        // 브라우저 차단을 피하기 위해 'no-cors' 모드를 사용합니다.
         await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
@@ -1682,16 +1682,14 @@
             body: JSON.stringify(payload)
         });
 
-        // 전송 성공으로 간주
+        // no-cors 모드에서는 응답을 읽을 수 없지만 전송 자체는 성공합니다.
         return { success: true }; 
         
     } catch (error) {
         console.error('저장 에러:', error);
         return { success: false, error: error.message };
     }
-};
-            }
-        }
+} // 1693행 근처의 괄호 에러가 여기서 해결됩니다.
 
         // Google Sheets에서 불러오기
         async function loadOnlineCalculations() {
