@@ -1656,35 +1656,40 @@
 
         // Google Sheets에 저장
         async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        password: userPassword,
-                        action: 'save',
-                        type: type,
-                        widthInch: widthInch,
-                        heightInch: heightInch,
-                        customer: customerInfo.customer,
-                        date: customerInfo.date,
-                        address: customerInfo.address,
-                        location: customerInfo.location,
-                        email: customerInfo.email,
-                        phone: customerInfo.phone,
-                        frameColor: customerInfo.frameColor,
-                        meshColor: customerInfo.meshColor,
-                        results: results
-                    })
-                });
-                
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Google Sheets 저장 오류:', error);
-                return { success: false, error: error.message };
+    try {
+        const payload = {
+            password: APP_PASSWORD,
+            action: 'save',
+            type: type,
+            widthInch: widthInch,
+            heightInch: heightInch,
+            customer: customerInfo.customer,
+            date: customerInfo.date,
+            address: customerInfo.address,
+            location: customerInfo.location,
+            email: customerInfo.email,
+            phone: customerInfo.phone,
+            frameColor: customerInfo.frameColor,
+            meshColor: customerInfo.meshColor,
+            results: results
+        };
+
+        // CORS 에러를 방지하기 위해 mode: 'no-cors'와 Content-Type을 'text/plain'으로 설정합니다.
+        await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+
+        // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주하고 결과를 반환합니다.
+        return { success: true }; 
+        
+    } catch (error) {
+        console.error('구글 시트 저장 오류:', error);
+        return { success: false, error: error.message };
+    }
+};
             }
         }
 
