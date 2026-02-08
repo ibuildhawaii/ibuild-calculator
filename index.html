@@ -1600,7 +1600,7 @@
 
     <script>
         // ==================== 온라인 데이터베이스 설정 ====================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdMfLWUXS7g_zsZ5rOMPda3JJ7ENx3hIZ2Lv42Ekc3KGIdHAOsXxiC_1pWy8hGxwkd/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyo3uGO1js3JIeGgUeQbIOPI82lbGdjMG17wDdJrKL0Qx2Xam4AM8Zp5o2AWyfua15a/exec';
         const APP_PASSWORD = 'Screen10000**';
         let userPassword = '';
         let isOnlineMode = true; // 온라인 모드 활성화
@@ -1628,34 +1628,7 @@
         }
 
         // 연결 테스트
-        async function testConnection() {
-            console.log('🔗 Google Sheets 연결 테스트 중...');
-            console.log('📍 URL:', GOOGLE_SCRIPT_URL);
-            
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(userPassword) + '&action=load', {
-                    method: 'GET',
-                });
-                
-                console.log('✅ 응답 상태:', response.status);
-                
-                const data = await response.json();
-                console.log('📦 응답 데이터:', data);
-                
-                if (data.success) {
-                    console.log('✅ 연결 성공! 데이터:', data.data?.length || 0, '개');
-                } else {
-                    console.error('❌ 연결 실패:', data.error);
-                    alert('⚠️ Google Sheets 연결에 문제가 있습니다.\n\n' + data.error + '\n\nApps Script 배포 설정을 확인해주세요.');
-                }
-            } catch (error) {
-                console.error('❌ 연결 오류:', error);
-                alert('⚠️ Google Sheets에 연결할 수 없습니다.\n\n에러: ' + error.message + '\n\n해결 방법:\n1. Apps Script 배포 확인\n2. 액세스 권한: "모든 사용자"로 설정\n3. 새 배포 URL로 업데이트');
-            }
-        }
-
-        // Google Sheets에 저장
- async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
+        async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
     try {
         const payload = {
             password: APP_PASSWORD,
@@ -1674,7 +1647,7 @@
             results: results
         };
 
-        // 브라우저 차단을 피하기 위해 'no-cors' 모드를 사용합니다.
+        // 브라우저의 CORS 차단을 우회하기 위해 'no-cors' 모드를 사용합니다.
         await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
@@ -1682,15 +1655,14 @@
             body: JSON.stringify(payload)
         });
 
-        // no-cors 모드에서는 응답을 읽을 수 없지만 전송 자체는 성공합니다.
+        // no-cors 모드에서는 응답을 읽을 수 없지만 전송 자체는 성공한 것으로 간주합니다.
         return { success: true }; 
         
     } catch (error) {
         console.error('저장 에러:', error);
         return { success: false, error: error.message };
     }
-} // 1693행 근처의 괄호 에러가 여기서 해결됩니다.
-
+} // 이 위치에서 함수가 정확히 닫히도록 확인하세요.
         // Google Sheets에서 불러오기
         async function loadOnlineCalculations() {
             try {
