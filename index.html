@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1623,37 +1624,104 @@
             }
         }
 
+        // 온라인 상태 확인
+        function isOnline() {
+            return navigator.onLine;
+        }
+
+        // 오프라인 대기 데이터 저장
+        function savePendingSync(data) {
+            const pending = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+            pending.push({ ...data, pendingAt: new Date().toISOString() });
+            localStorage.setItem('pendingSync', JSON.stringify(pending));
+            console.log('📦 오프라인 대기 저장:', pending.length + '개');
+        }
+
+        // 오프라인 대기 데이터 동기화
+        async function syncPendingData() {
+            const pending = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+            if (pending.length === 0) return;
+
+            console.log('🔄 오프라인 대기 데이터 동기화 중...', pending.length + '개');
+            const failed = [];
+
+            for (const item of pending) {
+                try {
+                    const response = await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...item, password: userPassword })
+                    });
+                    const result = await response.json();
+                    if (!result.success) failed.push(item);
+                    else console.log('✅ 동기화 완료:', item.customer);
+                } catch (e) {
+                    failed.push(item);
+                }
+            }
+
+            localStorage.setItem('pendingSync', JSON.stringify(failed));
+            if (failed.length === 0) {
+                console.log('✅ 모든 오프라인 데이터 동기화 완료!');
+            } else {
+                console.log('⚠️ ' + failed.length + '개 동기화 실패 - 다음에 재시도');
+            }
+        }
+
         // Google Sheets에 저장
         async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
+            const saveData = {
+                action: 'save',
+                type: type,
+                widthInch: widthInch,
+                heightInch: heightInch,
+                customer: customerInfo.customer,
+                date: customerInfo.date,
+                address: customerInfo.address,
+                location: customerInfo.location,
+                email: customerInfo.email,
+                phone: customerInfo.phone,
+                frameColor: customerInfo.frameColor,
+                meshColor: customerInfo.meshColor,
+                results: results
+            };
+
+            // 오프라인 백업 (항상)
+            saveToLocalBackup(type, widthInch, heightInch, customerInfo, results);
+
+            // 온라인 저장 시도
+            if (!isOnline()) {
+                savePendingSync(saveData);
+                return { success: true, offline: true };
+            }
+
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        password: userPassword,
-                        action: 'save',
-                        type: type,
-                        widthInch: widthInch,
-                        heightInch: heightInch,
-                        customer: customerInfo.customer,
-                        date: customerInfo.date,
-                        address: customerInfo.address,
-                        location: customerInfo.location,
-                        email: customerInfo.email,
-                        phone: customerInfo.phone,
-                        frameColor: customerInfo.frameColor,
-                        meshColor: customerInfo.meshColor,
-                        results: results
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...saveData, password: userPassword })
                 });
-                
                 const data = await response.json();
+
+                // 성공시 오프라인 대기 데이터도 동기화
+                if (data.success) syncPendingData();
+
                 return data;
             } catch (error) {
-                console.error('Google Sheets 저장 오류:', error);
-                return { success: false, error: error.message };
+                console.error('Google Sheets 저장 오류 - 오프라인 저장으로 대체:', error);
+                savePendingSync(saveData);
+                return { success: true, offline: true };
+            }
+        }
+
+        // 로컬 백업 저장 (IndexedDB)
+        function saveToLocalBackup(type, widthInch, heightInch, customerInfo, results) {
+            const widthMm = widthInch * 25.4;
+            const heightMm = heightInch * 25.4;
+            if (db) {
+                saveCalculationWithCustomer(type, widthInch, heightInch, customerInfo, results)
+                    .then(() => console.log('✅ 로컬 백업 저장 완료'))
+                    .catch(e => console.error('로컬 백업 실패:', e));
             }
         }
 
@@ -1700,6 +1768,47 @@
                 return { success: false };
             }
         }
+
+
+        // 온라인 삭제 (저장 내역에서 사용)
+        async function onlineDelete(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            
+            try {
+                const result = await deleteOnlineCalculation(id);
+                if (result && result.success) {
+                    // 캐시에서도 제거
+                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                    filterCalculations();
+                    console.log('✅ 삭제 완료');
+                } else {
+                    // 캐시에서만 제거 (서버 오류시에도 UI 업데이트)
+                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                    filterCalculations();
+                }
+            } catch (error) {
+                console.error('삭제 오류:', error);
+                // 에러시에도 캐시에서 제거
+                allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                filterCalculations();
+            }
+        }
+
+
+        // 온라인/오프라인 상태 감지
+        window.addEventListener('online', function() {
+            console.log('🌐 인터넷 연결됨!');
+            syncPendingData().then(() => {
+                const pending = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+                if (pending.length === 0) {
+                    console.log('✅ 모든 오프라인 데이터 동기화 완료!');
+                }
+            });
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📴 인터넷 연결 끊김 - 오프라인 모드로 전환');
+        });
 
         // ==================== 기존 IndexedDB 설정 (백업용) ====================
         // IndexedDB 데이터베이스 설정
@@ -3240,31 +3349,21 @@
             // 계산 실행
             const results = type === 'single' ? calculateSingle(widthMm, heightMm) : calculateDouble(widthMm, heightMm);
 
-            // 로컬 저장 (IndexedDB)
-            if (!db) {
-                initDB()
-                    .then(() => {
-                        return saveCalculationWithCustomer(type, widthInch, heightInch, customerInfo, results);
-                    })
-                    .then(id => {
-                        alert('✅ 계산 결과가 저장되었습니다!');
-                        console.log('저장 완료 (ID:', id, ')');
-                    })
-                    .catch(error => {
-                        alert('❌ 저장에 실패했습니다: ' + error.message);
-                        console.error('저장 실패:', error);
-                    });
-            } else {
-                saveCalculationWithCustomer(type, widthInch, heightInch, customerInfo, results)
-                    .then(id => {
-                        alert('✅ 계산 결과가 저장되었습니다!');
-                        console.log('저장 완료 (ID:', id, ')');
-                    })
-                    .catch(error => {
-                        alert('❌ 저장에 실패했습니다: ' + error.message);
-                        console.error('저장 실패:', error);
-                    });
-            }
+            // 온라인 + 오프라인 통합 저장
+            saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results)
+                .then(result => {
+                    if (result.offline) {
+                        alert('📦 오프라인 저장 완료!\n인터넷 연결 시 자동으로 Google Sheets에 동기화됩니다.');
+                    } else if (result.success) {
+                        alert('✅ 온라인 저장 완료!\n(로컬 백업도 저장됨)');
+                        loadOnlineCalculations();
+                    } else {
+                        alert('❌ 저장에 실패했습니다: ' + (result.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(error => {
+                    alert('❌ 저장 중 오류: ' + error.message);
+                });
         }
 
         // 주문서 출력
@@ -3315,23 +3414,47 @@
 
         // 저장 내역 모달 열기
         function showSavedCalculations() {
-            // 온라인 데이터 새로고침
-            loadOnlineCalculations()
-                .then(() => {
-                    const modal = document.getElementById('savedCalculationsModal');
-                    
-                    // 검색 및 필터 초기화
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('sortSelect').value = 'date-desc';
-                    document.getElementById('typeFilter').value = 'all';
-                    
-                    filterCalculations();
-                    modal.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('저장 내역 불러오기 실패:', error);
-                    alert('저장 내역을 불러올 수 없습니다.');
-                });
+            const modal = document.getElementById('savedCalculationsModal');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('sortSelect').value = 'date-desc';
+            document.getElementById('typeFilter').value = 'all';
+
+            if (!isOnline()) {
+                // 오프라인: 로컬 IndexedDB에서 불러오기
+                console.log('📴 오프라인 모드 - 로컬 데이터 사용');
+                getAllCalculations()
+                    .then(calculations => {
+                        allCalculationsCache = calculations;
+                        filterCalculations();
+                        modal.style.display = 'block';
+                        // 상단에 오프라인 알림 표시
+                        const list = document.getElementById('savedCalculationsList');
+                        const offlineNotice = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin-bottom:15px;text-align:center;">📴 오프라인 모드 - 로컬 저장 데이터 표시 중</div>';
+                        list.insertAdjacentHTML('afterbegin', offlineNotice);
+                    })
+                    .catch(() => {
+                        filterCalculations();
+                        modal.style.display = 'block';
+                    });
+            } else {
+                // 온라인: Google Sheets에서 불러오기
+                loadOnlineCalculations()
+                    .then(() => {
+                        // 오프라인 대기 데이터 동기화
+                        syncPendingData();
+                        filterCalculations();
+                        modal.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('온라인 로드 실패 - 로컬 데이터 사용:', error);
+                        getAllCalculations()
+                            .then(calculations => {
+                                allCalculationsCache = calculations;
+                                filterCalculations();
+                                modal.style.display = 'block';
+                            });
+                    });
+            }
         }
 
         // 필터링 및 정렬 함수
@@ -3418,7 +3541,7 @@
                                 ${calc.phone ? `<div style="color: #666; font-size: 13px; margin-top: 3px;">📞 ${calc.phone}</div>` : ''}
                                 ${calc.email ? `<div style="color: #666; font-size: 13px; margin-top: 3px;">📧 ${calc.email}</div>` : ''}
                             </div>
-                            <button onclick="deleteCalculation(${calc.id}).then(() => { getAllCalculations().then(c => { allCalculationsCache = c; filterCalculations(); }); })" 
+                            <button onclick="onlineDelete(${calc.id})" 
                                     style="background: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">
                                 삭제
                             </button>
@@ -3431,7 +3554,7 @@
                             <div><strong>망 색상:</strong> ${calc.meshColor || '-'}</div>
                             <div><strong>날짜:</strong> ${calc.date || '-'}</div>
                         </div>
-                        <button onclick="console.log('🔘 불러오기 버튼 클릭됨, ID:', ${calc.id}); loadCalculation(${calc.id})" 
+                        <button onclick="loadCalculation(${calc.id})" 
                                 style="margin-top: 10px; width: 100%; padding: 8px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer;">
                             📋 불러오기
                         </button>
@@ -3501,10 +3624,10 @@
                     alert('❌ 해당 ID의 데이터를 찾을 수 없습니다.');
                 }
             } else {
-                // 캐시가 없으면 DB에서 직접 가져오기
-                getAllCalculations()
-                    .then(calculations => {
-                        allCalculationsCache = calculations;
+                // 캐시가 없으면 온라인에서 다시 불러오기
+                loadOnlineCalculations()
+                    .then(() => {
+                        const calculations = allCalculationsCache;
                         const calc = calculations.find(c => c.id === id);
                         
                         if (calc) {
