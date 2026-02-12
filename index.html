@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1754,20 +1753,19 @@
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         password: userPassword,
                         action: 'delete',
-                        id: id
+                        id: id.toString()
                     })
                 });
                 const data = await response.json();
+                console.log('🗑️ 삭제 응답:', data);
                 return data;
             } catch (error) {
                 console.error('삭제 오류:', error);
-                return { success: false };
+                return { success: false, error: error.message };
             }
         }
 
@@ -1780,7 +1778,7 @@
                 // 오프라인: 로컬에서만 삭제
                 try {
                     await deleteCalculation(id);
-                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                    allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== id.toString());
                     filterCalculations();
                     console.log('✅ 로컬 삭제 완료');
                 } catch(e) {
@@ -1802,7 +1800,7 @@
             } catch (error) {
                 console.error('삭제 오류:', error);
                 // 에러시 캐시에서만 제거
-                allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== id.toString());
                 filterCalculations();
             }
         }
@@ -3370,7 +3368,7 @@
                     } else if (result.success) {
                         // 저장 후 최신 데이터 다시 로드
                         await loadOnlineCalculations();
-                        alert('✅ 저장 완료! (온라인 + 로컬 백업)');
+                        alert('✅ 저장 완료!\n온라인(Google Sheets) + 로컬 백업 저장됨');
                     } else {
                         alert('❌ 저장에 실패했습니다: ' + (result.error || '알 수 없는 오류'));
                     }
@@ -3589,7 +3587,7 @@
             
             // 캐시된 데이터 사용
             if (allCalculationsCache.length > 0) {
-                const calc = allCalculationsCache.find(c => c.id === id);
+                const calc = allCalculationsCache.find(c => c.id.toString() === id.toString());
                 console.log('📋 찾은 데이터:', calc);
                 
                 if (calc) {
