@@ -1766,27 +1766,22 @@
         }
 
 
-        // 온라인 삭제 (저장 내역에서 사용)
-        async function onlineDelete(id) {
-            if (!confirm('삭제하시겠습니까?')) return;
-            const idStr = id.toString();
-            console.log('삭제 ID:', idStr);
-            try {
-                const result = await callGAS({
-                    password: userPassword,
-                    action: 'delete',
-                    id: idStr
-                });
-                console.log('삭제 응답:', result);
-                allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== idStr);
-                filterCalculations();
-                await loadOnlineCalculations();
-                filterCalculations();
-            } catch (error) {
-                console.error('삭제 오류:', error);
-                alert('삭제 오류: ' + error.message);
-            }
-        }
+        // 온라인 삭제
+async function deleteOnlineCalculation(id) {
+    try {
+        const data = await callGAS({
+            password: userPassword,
+            action: 'delete',
+            id: id.toString()
+        });
+        console.log('🗑️ 삭제 응답:', data);
+        return data;
+    } catch (error) {
+        console.error('삭제 오류:', error);
+        return { success: false, error: error.message };
+    }
+}
+      
 
 
         // 온라인/오프라인 상태 감지
