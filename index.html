@@ -1728,10 +1728,8 @@
         // Google Sheets에서 불러오기
         async function loadOnlineCalculations() {
             try {
-                const response = await fetch(GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(userPassword) + '&action=load', {
-                    method: 'GET',
-                });
-                
+                const url = GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(userPassword) + '&action=load&t=' + Date.now();
+                const response = await fetch(url, { method: 'GET' });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -1739,11 +1737,15 @@
                     console.log('📊 온라인 데이터 로드:', allCalculationsCache.length + '개');
                 } else {
                     console.error('데이터 로드 실패:', data.error);
-                    allCalculationsCache = [];
                 }
             } catch (error) {
                 console.error('온라인 데이터 로드 오류:', error);
-                allCalculationsCache = [];
+                // 오프라인이면 로컬에서 불러오기
+                try {
+                    const localData = await getAllCalculations();
+                    allCalculationsCache = localData;
+                    console.log('📴 로컬 데이터 사용:', allCalculationsCache.length + '개');
+                } catch(e) {}
             }
         }
 
@@ -1773,22 +1775,33 @@
         // 온라인 삭제 (저장 내역에서 사용)
         async function onlineDelete(id) {
             if (!confirm('삭제하시겠습니까?')) return;
-            
+
+            if (!isOnline()) {
+                // 오프라인: 로컬에서만 삭제
+                try {
+                    await deleteCalculation(id);
+                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
+                    filterCalculations();
+                    console.log('✅ 로컬 삭제 완료');
+                } catch(e) {
+                    alert('삭제 실패: ' + e.message);
+                }
+                return;
+            }
+
+            // 온라인: Google Sheets에서 삭제 후 다시 불러오기
             try {
                 const result = await deleteOnlineCalculation(id);
-                if (result && result.success) {
-                    // 캐시에서도 제거
-                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
-                    filterCalculations();
-                    console.log('✅ 삭제 완료');
-                } else {
-                    // 캐시에서만 제거 (서버 오류시에도 UI 업데이트)
-                    allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
-                    filterCalculations();
-                }
+                console.log('삭제 결과:', result);
+                
+                // 삭제 성공 여부와 관계없이 서버에서 최신 데이터 다시 로드
+                await loadOnlineCalculations();
+                filterCalculations();
+                console.log('✅ 삭제 후 데이터 갱신 완료');
+                
             } catch (error) {
                 console.error('삭제 오류:', error);
-                // 에러시에도 캐시에서 제거
+                // 에러시 캐시에서만 제거
                 allCalculationsCache = allCalculationsCache.filter(c => c.id !== id);
                 filterCalculations();
             }
@@ -3351,12 +3364,13 @@
 
             // 온라인 + 오프라인 통합 저장
             saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results)
-                .then(result => {
+                .then(async result => {
                     if (result.offline) {
                         alert('📦 오프라인 저장 완료!\n인터넷 연결 시 자동으로 Google Sheets에 동기화됩니다.');
                     } else if (result.success) {
-                        alert('✅ 온라인 저장 완료!\n(로컬 백업도 저장됨)');
-                        loadOnlineCalculations();
+                        // 저장 후 최신 데이터 다시 로드
+                        await loadOnlineCalculations();
+                        alert('✅ 저장 완료! (온라인 + 로컬 백업)');
                     } else {
                         alert('❌ 저장에 실패했습니다: ' + (result.error || '알 수 없는 오류'));
                     }
