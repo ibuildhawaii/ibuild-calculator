@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1670,50 +1669,44 @@
 
         // Google Sheets에 저장
         async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
-            const saveData = {
-                action: 'save',
-                type: type,
-                widthInch: widthInch,
-                heightInch: heightInch,
-                customer: customerInfo.customer,
-                date: customerInfo.date,
-                address: customerInfo.address,
-                location: customerInfo.location,
-                email: customerInfo.email,
-                phone: customerInfo.phone,
-                frameColor: customerInfo.frameColor,
-                meshColor: customerInfo.meshColor,
-                results: results
-            };
-
-            // 오프라인 백업 (항상)
+            // 로컬 백업 항상 저장
             saveToLocalBackup(type, widthInch, heightInch, customerInfo, results);
 
-            // 온라인 저장 시도
             if (!isOnline()) {
-                savePendingSync(saveData);
+                console.log('오프라인 - 로컬만 저장');
                 return { success: true, offline: true };
             }
 
             try {
+                console.log('Google Sheets 저장 중...');
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...saveData, password: userPassword })
+                    body: JSON.stringify({
+                        password: userPassword,
+                        action: 'save',
+                        type: type,
+                        widthInch: widthInch,
+                        heightInch: heightInch,
+                        customer: customerInfo.customer,
+                        date: customerInfo.date,
+                        address: customerInfo.address,
+                        location: customerInfo.location,
+                        email: customerInfo.email,
+                        phone: customerInfo.phone,
+                        frameColor: customerInfo.frameColor,
+                        meshColor: customerInfo.meshColor,
+                        results: results
+                    })
                 });
                 const data = await response.json();
-
-                // 성공시 오프라인 대기 데이터도 동기화
-                if (data.success) syncPendingData();
-
+                console.log('저장 응답:', data);
                 return data;
             } catch (error) {
-                console.error('Google Sheets 저장 오류 - 오프라인 저장으로 대체:', error);
-                savePendingSync(saveData);
-                return { success: true, offline: true };
+                console.error('저장 오류:', error);
+                return { success: false, offline: true, error: error.message };
             }
         }
-
         // 로컬 백업 저장 (IndexedDB)
         function saveToLocalBackup(type, widthInch, heightInch, customerInfo, results) {
             const widthMm = widthInch * 25.4;
@@ -1774,35 +1767,27 @@
         // 온라인 삭제 (저장 내역에서 사용)
         async function onlineDelete(id) {
             if (!confirm('삭제하시겠습니까?')) return;
-
-            if (!isOnline()) {
-                // 오프라인: 로컬에서만 삭제
-                try {
-                    await deleteCalculation(id);
-                    allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== id.toString());
-                    filterCalculations();
-                    console.log('✅ 로컬 삭제 완료');
-                } catch(e) {
-                    alert('삭제 실패: ' + e.message);
-                }
-                return;
-            }
-
-            // 온라인: Google Sheets에서 삭제 후 다시 불러오기
+            const idStr = id.toString();
+            console.log('삭제 ID:', idStr);
             try {
-                const result = await deleteOnlineCalculation(id);
-                console.log('삭제 결과:', result);
-                
-                // 삭제 성공 여부와 관계없이 서버에서 최신 데이터 다시 로드
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password: userPassword,
+                        action: 'delete',
+                        id: idStr
+                    })
+                });
+                const result = await response.json();
+                console.log('삭제 응답:', result);
+                allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== idStr);
+                filterCalculations();
                 await loadOnlineCalculations();
                 filterCalculations();
-                console.log('✅ 삭제 후 데이터 갱신 완료');
-                
             } catch (error) {
                 console.error('삭제 오류:', error);
-                // 에러시 캐시에서만 제거
-                allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== id.toString());
-                filterCalculations();
+                alert('삭제 오류: ' + error.message);
             }
         }
 
@@ -3554,7 +3539,7 @@
                                 ${calc.phone ? `<div style="color: #666; font-size: 13px; margin-top: 3px;">📞 ${calc.phone}</div>` : ''}
                                 ${calc.email ? `<div style="color: #666; font-size: 13px; margin-top: 3px;">📧 ${calc.email}</div>` : ''}
                             </div>
-                            <button onclick="onlineDelete(${calc.id})" 
+                            <button onclick="onlineDelete('${calc.id}')" 
                                     style="background: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">
                                 삭제
                             </button>
@@ -3567,7 +3552,7 @@
                             <div><strong>망 색상:</strong> ${calc.meshColor || '-'}</div>
                             <div><strong>날짜:</strong> ${calc.date || '-'}</div>
                         </div>
-                        <button onclick="loadCalculation(${calc.id})" 
+                        <button onclick="loadCalculation('${calc.id}')" 
                                 style="margin-top: 10px; width: 100%; padding: 8px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer;">
                             📋 불러오기
                         </button>
