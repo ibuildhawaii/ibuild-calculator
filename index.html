@@ -3516,7 +3516,7 @@
 
         // 모든 계산 결과 삭제
 
-        function clearAllCalculations() {
+        window.clearAllCalculations = function clearAllCalculations() {
 
             return new Promise((resolve, reject) => {
 
@@ -4710,7 +4710,7 @@
 
         // 팝업 모달 즉시 닫기 (버튼/ESC/외부클릭)
 
-        function closeModal() {
+        window.closeModal = function closeModal() {
 
             // 모든 타이머 취소
 
@@ -7002,4 +7002,6 @@
 
             drawScreenDiagram('single', samplePositions, sampleHeight);
 
-  
+    </script>
+</body>
+</html>
