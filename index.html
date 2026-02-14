@@ -2076,7 +2076,7 @@
 
                         <span style="font-size: 16px;">📧</span>
 
-                        <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="274e45524e4b434f4650464e4e67404a464e4b0944484a">[email&#160;protected]</a></span>
+                        <span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4d242f38242129252c3a2c24240d2a202c2421632e2220">[email&#160;protected]</a></span>
 
                     </div>
 
@@ -3229,15 +3229,6 @@
                 document.getElementById('mainApp').style.display = 'block';
 
                 document.getElementById('loginError').style.display = 'none';
-
-                
-
-                // 연결 테스트
-
-                testConnection();
-
-                
-
                 // 초기 데이터 로드
 
                 loadOnlineCalculations();
@@ -3256,205 +3247,85 @@
 
 
 
-        // 연결 테스트
 
-        // 1. 저장 함수 (CORS 우회를 위해 mode: 'no-cors' 사용)
+        // Google Apps Script GET 방식 호출 (CORS 우회)
+        async function callGAS(params) {
+            const url = new URL(GOOGLE_SCRIPT_URL);
+            Object.keys(params).forEach(k => url.searchParams.append(k, 
+                typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
+            ));
+            const response = await fetch(url.toString(), { method: 'GET' });
+            return response.json();
+        }
 
-async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
-
-    try {
-
-        const payload = {
-
-            password: APP_PASSWORD,
-
-            action: 'save',
-
-            type: type,
-
-            widthInch: widthInch,
-
-            heightInch: heightInch,
-
-            customer: customerInfo.customer,
-
-            date: customerInfo.date,
-
-            address: customerInfo.address,
-
-            location: customerInfo.location,
-
-            email: customerInfo.email,
-
-            phone: customerInfo.phone,
-
-            frameColor: customerInfo.frameColor,
-
-            meshColor: customerInfo.meshColor,
-
-            results: results
-
+        // 삭제 전역 함수 (동적 HTML 버튼에서 호출)
+        window.gasDelete = async function(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            const idStr = id.toString();
+            try {
+                const result = await callGAS({
+                    password: userPassword,
+                    action: 'delete',
+                    id: idStr
+                });
+                if (result.success) {
+                    allCalculationsCache = allCalculationsCache.filter(c => c.id.toString() !== idStr);
+                    filterCalculations();
+                    await loadOnlineCalculations();
+                    filterCalculations();
+                } else {
+                    alert('삭제 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('삭제 오류: ' + error.message);
+            }
         };
 
-
-
-        await fetch(GOOGLE_SCRIPT_URL, {
-
-            method: 'POST',
-
-            mode: 'no-cors', // CORS 정책 차단 우회
-
-            headers: { 'Content-Type': 'text/plain' },
-
-            body: JSON.stringify(payload)
-
-        });
-
-
-
-        return { success: true }; 
-
-    } catch (error) {
-
-        console.error('저장 에러:', error);
-
-        return { success: false, error: error.message };
-
-    }
-
-} // <--- 괄호가 누락되지 않았는지 꼭 확인!
-
-
-
-// 2. 연결 테스트 함수 (오타 수정)
-
-async function testConnection() {
-
-    try {
-
-        const response = await fetch(GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(APP_PASSWORD) + '&action=load');
-
-        const data = await response.json();
-
-        if (data.success) {
-
-            console.log('✅ 연결 성공! 데이터:', data.data.length, '개');
-
+        // Google Sheets에 저장
+        async function saveToGoogleSheets(type, widthInch, heightInch, customerInfo, results) {
+            try {
+                const data = await callGAS({
+                    password: userPassword,
+                    action: 'save',
+                    type: type,
+                    widthInch: widthInch,
+                    heightInch: heightInch,
+                    customer: customerInfo.customer,
+                    date: customerInfo.date,
+                    address: customerInfo.address,
+                    location: customerInfo.location,
+                    email: customerInfo.email,
+                    phone: customerInfo.phone,
+                    frameColor: customerInfo.frameColor,
+                    meshColor: customerInfo.meshColor,
+                    results: results
+                });
+                return data;
+            } catch (error) {
+                console.error('저장 오류:', error);
+                return { success: false, error: error.message };
+            }
         }
-
-    } catch (error) {
-
-        console.error('❌ 연결 실패:', error);
-
-    }
-
-}
 
         // Google Sheets에서 불러오기
-
         async function loadOnlineCalculations() {
-
             try {
-
-                const response = await fetch(GOOGLE_SCRIPT_URL + '?password=' + encodeURIComponent(userPassword) + '&action=load', {
-
-                    method: 'GET',
-
+                const data = await callGAS({
+                    password: userPassword,
+                    action: 'load',
+                    t: Date.now()
                 });
-
-                
-
-                const data = await response.json();
-
-                
-
                 if (data.success) {
-
                     allCalculationsCache = data.data || [];
-
                     console.log('📊 온라인 데이터 로드:', allCalculationsCache.length + '개');
-
                 } else {
-
                     console.error('데이터 로드 실패:', data.error);
-
-                    allCalculationsCache = [];
-
                 }
-
             } catch (error) {
-
                 console.error('온라인 데이터 로드 오류:', error);
-
-                allCalculationsCache = [];
-
             }
-
         }
 
-
-
-        // 온라인 삭제
-
-        async function deleteOnlineCalculation(id) {
-
-            try {
-
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-
-                    method: 'POST',
-
-                    headers: {
-
-                        'Content-Type': 'application/json',
-
-                    },
-
-                    body: JSON.stringify({
-
-                        password: userPassword,
-
-                        action: 'delete',
-
-                        id: id
-
-                    })
-
-                });
-
-                const data = await response.json();
-
-                return data;
-
-            } catch (error) {
-
-                console.error('삭제 오류:', error);
-
-                return { success: false };
-
-            }
-
-        }
-
-
-
-        // ==================== 기존 IndexedDB 설정 (백업용) ====================
-
-        // IndexedDB 데이터베이스 설정
-
-        let db;
-
-        let allCalculationsCache = []; // 전체 데이터 캐시
-
-        const DB_NAME = 'ScreenCalculatorDB';
-
-        const DB_VERSION = 1;
-
-        const STORE_NAME = 'calculations';
-
-
-
-        // 데이터베이스 초기화
 
         function initDB() {
 
