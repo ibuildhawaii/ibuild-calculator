@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <circle cx="32" cy="32" r="30" fill="#2C5F2D"/>
+  <line x1="14" y1="17" x2="50" y2="17" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="26" x2="50" y2="26" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="35" x2="50" y2="35" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="14" y1="44" x2="50" y2="44" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="17" y1="14" x2="17" y2="50" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="26" y1="14" x2="26" y2="50" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="35" y1="14" x2="35" y2="50" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="44" y1="14" x2="44" y2="50" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+  <rect x="12" y="12" width="40" height="40" rx="2" ry="2" fill="none" stroke="#D4A574" stroke-width="3"/>
+</svg>
