@@ -3214,7 +3214,7 @@
 
         // 로그인 함수
 
-        function login() {
+        window.login = function login() {
 
             const password = document.getElementById('loginPassword').value;
 
@@ -3515,7 +3515,7 @@
 
         // 모든 계산 결과 삭제
 
-        function clearAllCalculations() {
+        window.clearAllCalculations = function clearAllCalculations() {
 
             return new Promise((resolve, reject) => {
 
@@ -3567,7 +3567,7 @@
 
         // 구조도 표시 (호버용)
 
-        function showStructureDiagram(type) {
+        window.showStructureDiagram = function showStructureDiagram(type) {
 
             // 닫기 타이머가 있으면 취소
 
@@ -3633,7 +3633,7 @@
 
         // 구조도 숨기기 (호버 종료 시)
 
-        function hideStructureDiagram() {
+        window.hideStructureDiagram = function hideStructureDiagram() {
 
             // 열기 타이머가 있으면 취소 (아직 열리지 않은 경우)
 
@@ -3663,7 +3663,7 @@
 
         // 모달 위에 마우스가 있을 때 닫기 취소
 
-        function keepModalOpen() {
+        window.keepModalOpen = function keepModalOpen() {
 
             if (modalCloseTimer) {
 
@@ -3685,7 +3685,7 @@
 
         
 
-        function showPartsList(type) {
+        window.showPartsList = function showPartsList(type) {
 
             // 닫기 타이머가 있으면 취소
 
@@ -4489,7 +4489,7 @@
 
         // 부속 리스트 숨기기 (호버 종료 시)
 
-        function hidePartsList() {
+        window.hidePartsList = function hidePartsList() {
 
             // 열기 타이머가 있으면 취소
 
@@ -4519,7 +4519,7 @@
 
         // 부속 리스트 모달 위에 마우스가 있을 때 닫기 취소
 
-        function keepPartsModalOpen() {
+        window.keepPartsModalOpen = function keepPartsModalOpen() {
 
             if (partsModalCloseTimer) {
 
@@ -4535,7 +4535,7 @@
 
         // 부속 리스트 모달 즉시 닫기 (버튼용)
 
-        function closePartsModalDirect() {
+        window.closePartsModalDirect = function closePartsModalDirect() {
 
             if (partsModalOpenTimer) {
 
@@ -4709,7 +4709,7 @@
 
         // 팝업 모달 즉시 닫기 (버튼/ESC/외부클릭)
 
-        function closeModal() {
+        window.closeModal = function closeModal() {
 
             // 모든 타이머 취소
 
@@ -5125,7 +5125,7 @@
 
         // 탭 전환 함수
 
-        function switchTab(tab, element) {
+        window.switchTab = function switchTab(tab, element) {
 
             // 모든 탭과 콘텐츠에서 active 클래스 제거
 
@@ -5147,7 +5147,7 @@
 
         // 단위 설정
 
-        function setUnit(type, unit, event) {
+        window.setUnit = function setUnit(type, unit, event) {
 
             units[type] = unit;
 
@@ -5865,7 +5865,7 @@
 
         // 메인 계산 함수
 
-        function calculate(type) {
+        window.calculate = function calculate(type) {
 
             let width = parseFloat(document.getElementById(`width-${type}`).value);
 
@@ -6299,7 +6299,7 @@
 
         // 수동 저장 함수
 
-        function manualSaveCalculation(type) {
+        window.manualSaveCalculation = function manualSaveCalculation(type) {
 
             const widthInput = document.getElementById(`width-${type}`);
 
@@ -6425,7 +6425,7 @@
 
         // 주문서 출력
 
-        function printOrder(type) {
+        window.printOrder = function printOrder(type) {
 
             const customer = document.getElementById(`customer-${type}`).value;
 
@@ -6451,7 +6451,7 @@
 
         // 폼 초기화
 
-        function resetForm(type) {
+        window.resetForm = function resetForm(type) {
 
             document.getElementById(`date-${type}`).value = '';
 
